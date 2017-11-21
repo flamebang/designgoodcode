@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Document</title>
+<style type="text/CSS">
+ul {padding: 0; margin: 0;}
+.tab {width: 500px;}
+.tab-menuWrapper {padding-left: -20px;}
+.tab-menuWrapper li { float: left; display: inline; padding: 5px; border: 1px solid #333; border-bottom: none; margin-right: 5px; }
+.tab-contentWrapper {border: 1px solid #333; clear: left; padding: 5px;}
+</style>
+</head>
+<body>
+<!-- 	
+	Tab选项卡
+	1.假设需要4个标签呢？6个？n个？
+	2.点击发现报错了，解决办法如下：
+	使用闭包；
+	给DOM节点添加索引
+	3. 存在一个严重的问题：现在content还只是简单的结构，真实环境中可能是复杂的HTML片段
+		content里还包含div标签，document.getElementById('tab-contentWrapper').getElementsByTagName('div')返回的就不再是单纯的content组成的数组，也包含content内部的div
+		注：为了区别class是用于CSS的挂钩还是JavaScript的挂钩（方便后期维护），我们可以给用于JavaScript的class加上“J_”作为前缀。
+	4. 客户要求：这个页面需要3个Tab，另外页面需要5个Tab, 我们的Tab能够满足复用条件吗？
+		不能：因为Tab的menu部分使用了id作为挂钩——tab-menuWrapper。同一个页面id只能出现一次，所以程序需要被多处复用，就一定不能使用id作为JavaScript获得DOM节点的挂钩
+	不能的话，现在该怎么办？
+		去电id，改用class作为挂钩
+	5. 上面工作很顺利，接着在页面中继续写2个Tab，点击出现问题了
+		程序没有区分menu和content从属于哪个Tab。
+		通过getElementsByClassName指定父容器，从而将3个Tab分开。即组件需要指定一个根节点，以保持各个组件之间的独立性。——————J_tab
+	
+ -->
+
+ <!-- 第一个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu">menu1-1</li>
+		<li class="J_tab-menu">menu1-2</li>
+		<li class="J_tab-menu">menu1-3</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content1-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content1-2</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" >content1-3</div>
+	</div>
+</div>
+ <!-- 第二个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu">menu2-1</li>
+		<li class="J_tab-menu">menu2-2</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content2-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content2-2</p><div>abc</div></div>
+	</div>
+</div>
+ <!-- 第三个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu">menu3-1</li>
+		<li class="J_tab-menu">menu3-2</li>
+		<li class="J_tab-menu">menu3-3</li>
+		<li class="J_tab-menu">menu3-4</li>
+		<li class="J_tab-menu">menu3-5</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content3-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-2</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-3</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-4</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-5</p><div>abc</div></div>
+	</div>
+</div>
+
+
+
+
+
+
+<script>
+var GLOBAL = {};
+GLOBAL.namespace = function(str) {
+	var arr = str.split("."),
+		o = GLOBAL;
+	for(i = (arr[0] == "GLOBAL") ? 1 : 0; i < arr.length; i++) {
+		o[arr[i]] = o[arr[i]] || {};
+		o = o[arr[i]];
+	}
+};
+GLOBAL.namespace("Dom");
+GLOBAL.Dom.getElementsByClassName = function(str, root, tag) {
+	if(root) {
+		root = typeof root == 'string' ? document.getElementById(root) : root;
+	}
+	else {
+		root = document.body;
+	}
+	tag = tag || '*';
+	var eles = root.getElementsByTagName(tag), // 获取父容器下所有标签
+		arr = [];
+	for(var i = 0, n = eles.length; i < n; i++) {
+		for(var j = 0, k = eles[i].className.split(' '), l = k.length; j < l; j++) {
+			if(k[j] == str) {
+				arr.push(eles[i]);
+				break;
+			}
+		}
+	}
+	return arr;
+};	
+
+
+function setTab(root) {
+	// 获得tabMenu和tabContent的DOM节点，并保存在变量中
+	var tabMenus = GLOBAL.Dom.getElementsByClassName('J_tab-menu', root),
+		tabContents = GLOBAL.Dom.getElementsByClassName('J_tab-content', root);
+	//遍历数组，让 tabMenu 监听 click 事件
+	for(var i = 0; i < tabMenus.length; i++) {
+		tabMenus[i].index = i;
+		tabMenus[i].onclick = function() {
+			console.log(tabContents.length); // 5
+			for(var j = 0; j < tabContents.length; j++) {
+				tabContents[j].style.display = 'none';
+			}
+			tabContents[this.index].style.display = 'block';
+		}
+	}
+}
+var tabs = GLOBAL.Dom.getElementsByClassName('J_tab');
+for(var i = 0; i < tabs.length; i++) {
+	setTab(tabs[i]);
+}
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>

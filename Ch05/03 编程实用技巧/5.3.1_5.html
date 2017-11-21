@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Document</title>
+<style type="text/CSS">
+ul {padding: 0; margin: 0;}
+.tab {width: 400px;}
+.tab-menuWrapper {padding-left: -20px;}
+.tab-menuWrapper li { float: left; display: inline; padding: 5px; border: 1px solid #333; border-bottom: none; margin-right: 5px; }
+.tab-contentWrapper {border: 1px solid #333; clear: left; padding: 5px;}
+</style>
+</head>
+<body>
+<!-- 	
+	Tab选项卡
+	1.假设需要4个标签呢？6个？n个？
+	2.点击发现报错了，解决办法如下：
+	使用闭包；
+	给DOM节点添加索引
+	3. 存在一个严重的问题：现在content还只是简单的结构，真实环境中可能是复杂的HTML片段
+		content里还包含div标签，document.getElementById('tab-contentWrapper').getElementsByTagName('div')返回的就不再是单纯的content组成的数组，也包含content内部的div
+		注：为了区别class是用于CSS的挂钩还是JavaScript的挂钩（方便后期维护），我们可以给用于JavaScript的class加上“J_”作为前缀。
+ -->
+<div class="tab">
+	<ul class="tab-menuWrapper" id="tab-menuWrapper">
+		<li>menu1</li>
+		<li>menu2</li>
+		<li>menu3</li>
+	</ul>
+	<div class="tab-contentWrapper" id="tab-contentWrapper">
+		<div><div>content1 <ul><li>abc</li></ul></div></div>
+		<div style="display: none;" ><p>content2</p><div>abc</div></div>
+		<div style="display: none;" >content3</div>
+	</div>
+</div>
+
+<script>
+// 获得tabMenu和tabContent的DOM节点，并保存在变量中
+var tabMenus = document.getElementById('tab-menuWrapper').getElementsByTagName('li'),
+	tabContents = document.getElementById('tab-contentWrapper').getElementsByTagName('div');
+//遍历数组，让 tabMenu 监听 click 事件
+for(var i = 0; i < tabMenus.length; i++) {
+	tabMenus[i].index = i;
+	tabMenus[i].onclick = function() {
+		console.log(tabContents.length); // 5
+		for(var j = 0; j < tabContents.length; j++) {
+			tabContents[j].style.display = 'none';
+		}
+		tabContents[this.index].style.display = 'block';
+	}
+}
+
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>

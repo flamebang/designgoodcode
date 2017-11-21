@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Document</title>
+<style type="text/CSS">
+ul {padding: 0; margin: 0;}
+.tab {width: 400px;}
+.tab-menuWrapper {padding-left: -20px;}
+.tab-menuWrapper li { float: left; display: inline; padding: 5px; border: 1px solid #333; border-bottom: none; margin-right: 5px; }
+.tab-contentWrapper {border: 1px solid #333; clear: left; padding: 5px;}
+</style>
+</head>
+<body>
+<!-- 	
+	Tab选项卡
+	假设需要4个标签呢？6个？n个？
+	点击发现报错了，解决办法如下：
+ -->
+<div class="tab">
+	<ul class="tab-menuWrapper" id="tab-menuWrapper">
+		<li>menu1</li>
+		<li>menu2</li>
+		<li>menu3</li>
+		<li>menu4</li>
+	</ul>
+	<div class="tab-contentWrapper" id="tab-contentWrapper">
+		<div>content1</div>
+		<div style="display: none;" >content2</div>
+		<div style="display: none;" >content3</div>
+		<div style="display: none;" >content4</div>
+	</div>
+</div>
+
+<script>
+// 获得tabMenu和tabContent的DOM节点，并保存在变量中
+var tabMenus = document.getElementById('tab-menuWrapper').getElementsByTagName('li'),
+	tabContents = document.getElementById('tab-contentWrapper').getElementsByTagName('div');
+//遍历数组，让 tabMenu 监听 click 事件
+for(var i = 0; i < tabMenus.length; i++) {
+	tabMenus[i].onclick = function() {
+		for(var j = 0; j < tabContents.length; j++) {
+			tabContents[j].style.display = 'none';
+		}
+		tabContents[i].style.display = 'block';
+	}
+}
+
+
+
+
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>

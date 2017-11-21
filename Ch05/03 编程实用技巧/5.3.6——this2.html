@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title></title>
+<style>
+
+</style>
+</head>
+<body>
+<!-- 
+	JavaScript中this指针是个让人捉摸不定的东西。
+	1.如JavaScript伪协议和内联事件对于this的指向不同 
+	2.setTimeout和setInterval也会改变this的指向
+	3."Dom.onxxx"也会改变this的指向
+	4.应对措施：
+		4.1 使用匿名函数可以解决这个问题
+			setTimeout、setInterval和"Dom.onxxx"改变的都是直接调用的函数里this的指向，其中setTimeout、setInterval将直接调用函数里的this指向window，"Dom.onxxx"将直接调用的函里的this指向DomNode。
+			使用匿名函数将我们的处理函数封装起来，可以将我们的处理函数由直接调用变成匿名函数间接调用。
+		4.2 使用call和apply函数来处理函数的this指向
+
+-->
+
+<!-- A -->
+<a href="#" onclick="alert(this.tagName)">click me</a><br/>
+<!-- undefined -->
+<a href="JavaScript:alert(this.tagName)">click me</a><br/>
+<!-- true -->
+<a href="JavaScript:alert(this == window)">click me</a><br/>
+<input type="button" value="click me" id="btn" name="BUTTON" />
+<script>
+var name = 'somebody';
+var leo = {
+	name: 'leo',
+	say: function() {
+		alert("I'm " + this.name);
+	}
+};
+/*
+leo.say(); // I'm leo
+setTimeout(leo.say, 1000); // I'm somebody
+setInterval(leo.say, 1000); // I'm somebody
+
+var btn = document.getElementById('btn');
+btn.onclick = leo.say; // I'm BUTTON 
+*/
+
+// 使用匿名函数
+// leo.say(); // I'm leo
+// setTimeout(function() {leo.say()}, 1000); // I'm leo
+// setInterval(function() {leo.say()}, 1000); // I'm leo
+// btn.onclick = function() {leo.say() }; // I'm leo
+
+setTimeout(function() {alert(this == window)}, 1000); // true
+btn.onclick = function() {alert(this == btn)}; // true
+
+</script>
+
+
+
+
+
+
+
+
+
+
+
+
+</body>
+</html>

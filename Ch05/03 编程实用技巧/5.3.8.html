@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Document</title>
+<style type="text/CSS">
+ul {padding: 0; margin: 0;}
+.tab {width: 500px;}
+.tab-menuWrapper {padding-left: -20px;}
+.tab-menuWrapper li { float: left; display: inline; padding: 5px; border: 1px solid #333; border-bottom: none; margin-right: 5px; }
+.tab-contentWrapper {border: 1px solid #333; clear: left; padding: 5px;}
+.tab .tab-currentMenu {background-color: #333; color: #fff; }
+.tab .tab-currentMenu2 {background-color: #0000ff; color: #fff; }
+.underline {text-decoration: underline;}
+</style>
+</head>
+<body>
+<!-- 	
+	Tab选项卡
+	1.假设需要4个标签呢？6个？n个？
+	2.点击发现报错了，解决办法如下：
+	使用闭包；
+	给DOM节点添加索引
+	3. 存在一个严重的问题：现在content还只是简单的结构，真实环境中可能是复杂的HTML片段
+		content里还包含div标签，document.getElementById('tab-contentWrapper').getElementsByTagName('div')返回的就不再是单纯的content组成的数组，也包含content内部的div
+		注：为了区别class是用于CSS的挂钩还是JavaScript的挂钩（方便后期维护），我们可以给用于JavaScript的class加上“J_”作为前缀。
+	4. 客户要求：这个页面需要3个Tab，另外页面需要5个Tab, 我们的Tab能够满足复用条件吗？
+		不能：因为Tab的menu部分使用了id作为挂钩——tab-menuWrapper。同一个页面id只能出现一次，所以程序需要被多处复用，就一定不能使用id作为JavaScript获得DOM节点的挂钩
+	不能的话，现在该怎么办？
+		去电id，改用class作为挂钩
+	5. 上面工作很顺利，接着在页面中继续写2个Tab，点击出现问题了
+		程序没有区分menu和content从属于哪个Tab。
+		通过getElementsByClassName指定父容器，从而将3个Tab分开。即组件需要指定一个根节点，以保持各个组件之间的独立性。——————J_tab
+	6. 客户又有新需求了，让当前Tab能够高亮显示，样式用灰底白字
+	7. 		if(currentMenu) {
+				currentMenu.className = '';
+			}
+			this.className = 'tab-currentMenu'; //给当前被点击的按钮挂上当前选中的 class
+		上面代码本意是添加和删除“tab-currentMenu”这个用于标识当前状态的class，如果DOM节点没有包含其它用于挂接样式的class（用于监听事件的不算）就不会出现意外，但如果DOM节点挂接了其它用于样式的class，就会出现冲突了！——————新增class “underline”
+		初始时，menu1-3有下划线，点击menu1-3之后，下划线会消失，这不是我们想要的结果，即Tab产生了副作用。
+		我们需要的是添加和删除tab-currentMenu，而不是设置class为tab-currentMenu和清空所有class。
+		8.修改后:			
+			if(currentMenu) {
+					currentMenu.className = currentMenu.className.replace(new RegExp("(^|\\s+)tab-currentMenu"), '');
+				}
+				if(!new RegExp("(^|\\s+)tab-currentMenu").test(this.className)) {
+					this.className = this.className + ' tab-currentMenu'; //给当前被点击的按钮挂上当前选中的 class
+				}
+		考虑到这种添加和删除class的操作在其它地方也有可能会被使用，可以在GLOBAL.Dom这个命名空间下新增两个base层的接口：addClass(node, str)和removeClass(node, str)
+		9. 客户又提出：这个高亮效果不错，但改变为：第一个Tab的当前标签不加高亮，第二个Tab的当前标签需要高亮，第三个Tab也许要高亮，同时与第二个Tab的高亮样式有所区别
+		应对措施：复制setTab函数，编写setTab2和setTab3
+		但是不够好：
+			原因：1. setTab、setTab2、setTab3代码大部分相同，可以考虑重用它们
+				  2. 扩展性糟糕，如果以后还要添加绿底白字或者红底白字的高亮样式，有需要添加setTab4、setTab5。因为setTab、setTab2、setTab3之间的区别仅仅是给当前标签挂上不同的class（或者不挂class），二setTab、setTab2、setTab3都将class名“写死”在函数内部，所以无法重用
+			我们可以将这个容易变化的因素从函数内部分离，以参数的形式传进来，函数内部引用这个参数，从而将class名“写活”。
+			即一个函数内某个因素很不稳定，我们可以将它从函数内部分离出来，以参数的形式传入，从而将不稳定因素和函数解耦
+		10. 出来当前高亮样式可以通过传参定制，另一个经常需要定制的是标签的激活事件
+			本例中，激活标签是通过click事件，但标签还有另一种常见的激活方式mouseover。我们最好将标签激活条件也写活，可以通过一个参数轻易实现定制。
+		11.IE8-报错：无法获取未定义或 null 引用的属性“style” this.index弹出“undefined”。
+			this关键字的指向？IE下this指向window
+		应对措施： 显示指定this指针指向，增加scope参数，用于设置handler中this指针指向，默认指向node节点
+		12. 预留回调接口
+			对于Tab来说，存在一个菜单的激活事件，有时候我们可能需要监听菜单的激活事件，并相应地执行一些操作。
+			这个操作并不在主流程中执行，而是有菜单的激活事件来触发的，他可以由我们自己来定制，并且是可有可无的。
+			对于这种需求，我们是通过设置回调函数来实现的
+		13. DRY规则
+			Tab有个常用的功能叫做自动切换，如果用户不去激活菜单，菜单本身也可以自动切换。
+			我们可以为Tab程序加上自动切换的功能，依据前面思路，将它做成可选的：如果在setTab函数的参数中，我们设置Tab可以自动切换，那么他就带自动切换功能，如果不设置，那么默认不带自动切换功能。
+ -->
+
+ <!-- 第一个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu">menu1-1</li>
+		<li class="J_tab-menu">menu1-2</li>
+		<li class="J_tab-menu underline">menu1-3</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content1-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content1-2</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" >content1-3</div>
+	</div>
+</div>
+ <!-- 第二个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu tab-currentMenu">menu2-1</li>
+		<li class="J_tab-menu">menu2-2</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content2-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content2-2</p><div>abc</div></div>
+	</div>
+</div>
+ <!-- 第三个选项卡 -->
+<div class="tab J_tab">
+	<ul class="tab-menuWrapper">
+		<li class="J_tab-menu tab-currentMenu2">menu3-1</li>
+		<li class="J_tab-menu">menu3-2</li>
+		<li class="J_tab-menu">menu3-3</li>
+		<li class="J_tab-menu">menu3-4</li>
+		<li class="J_tab-menu">menu3-5</li>
+	</ul>
+	<div class="tab-contentWrapper">
+		<div class="J_tab-content"><div>content3-1 <ul><li>abc</li></ul></div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-2</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-3</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-4</p><div>abc</div></div>
+		<div class="J_tab-content" style="display: none;" ><p>content3-5</p><div>abc</div></div>
+	</div>
+</div>
+
+<script>
+var GLOBAL = {};
+GLOBAL.namespace = function(str) {
+	var arr = str.split("."),
+		o = GLOBAL;
+	for(i = (arr[0] == "GLOBAL") ? 1 : 0; i < arr.length; i++) {
+		o[arr[i]] = o[arr[i]] || {};
+		o = o[arr[i]];
+	}
+};
+// DOM相关
+	GLOBAL.namespace("Dom");
+	GLOBAL.Dom.getElementsByClassName = function(str, root, tag) {
+		if(root) {
+			root = typeof root == 'string' ? document.getElementById(root) : root;
+		}
+		else {
+			root = document.body;
+		}
+		tag = tag || '*';
+		var eles = root.getElementsByTagName(tag), // 获取父容器下所有标签
+			arr = [];
+		for(var i = 0, n = eles.length; i < n; i++) {
+			for(var j = 0, k = eles[i].className.split(' '), l = k.length; j < l; j++) {
+				if(k[j] == str) {
+					arr.push(eles[i]);
+					break;
+				}
+			}
+		}
+		return arr;
+	};	
+	GLOBAL.Dom.addClass = function(node, str) {
+		if(!new RegExp("(^|\\s+)"+str).test(node.className)) {
+			node.className = node.className + ' ' + str;
+		}
+	};
+	GLOBAL.Dom.removeClass = function(node, str) {
+		node.className = node.className.replace(new RegExp("(^|\\s+)" + str), '');
+	};
+// Event相关
+	GLOBAL.namespace('Event');
+	// 显示指定this指针指向
+	GLOBAL.Event.on = function(node, eventType, handler, scope) {
+		node = typeof node == 'string' ? document.getElementById(node) : node;
+		scope = scope || node;
+		if(document.all) {
+			node.attachEvent('on' + eventType, function() {handler.apply(scope, arguments)});
+		}
+		else {
+			node.addEventListener(eventType, function() {handler.apply(scope, arguments)}, false);
+		}
+	};
+
+
+
+function setTab(root, currentClass, trigger, handler, autoPlay, playTime) {
+	// 获得tabMenu和tabContent的DOM节点，并保存在变量中
+	var tabMenus = GLOBAL.Dom.getElementsByClassName('J_tab-menu', root),
+		tabContents = GLOBAL.Dom.getElementsByClassName('J_tab-content', root);
+		// 如果不传入激活类型，默认激活类型为点击
+		trigger = trigger || "click";
+		playTime = playTime || 3000;
+		var currentIndex = 0;
+	function autoHandler() {
+		currentIndex++;
+		if(currentIndex >= tabMenus.length) {
+			currentIndex = 0;
+		}
+		for(var i = 0; i < tabContents.length; i++) {
+			tabContents[i].style.display = 'none';
+		}
+		tabContents[currentIndex].style.display = 'block';
+		if(currentClass) {	
+			// 如果有当前选中标签，则去掉“tab-currentMenu”
+			var currentMenu = GLOBAL.Dom.getElementsByClassName(currentClass, root)[0];
+			if(currentMenu) {
+				GLOBAL.Dom.removeClass(currentMenu, currentClass);
+			}
+			GLOBAL.Dom.addClass(tabMenus[currentIndex], currentClass);
+		}
+		if(handler) {
+			handler(currentIndex);
+		}
+	}
+	if(autoPlay) {
+		setInterval(autoHandler, playTime);
+	}
+	for(var i = 0; i < tabMenus.length; i++) {
+		tabMenus[i].index = i;
+		GLOBAL.Event.on(tabMenus[i], trigger, function() {
+			for(var j = 0; j < tabContents.length; j++) {
+				tabContents[j].style.display = 'none';
+			}
+			// alert(this.index);
+			// alert(this); // window
+			tabContents[this.index].style.display = 'block';
+			if(currentClass) {	
+				// 如果有当前选中标签，则去掉“tab-currentMenu”
+				var currentMenu = GLOBAL.Dom.getElementsByClassName(currentClass, root)[0];
+				if(currentMenu) {
+					GLOBAL.Dom.removeClass(currentMenu, currentClass);
+				}
+				GLOBAL.Dom.addClass(this, currentClass);
+			}
+			if(handler) {
+				handler(this.index);
+			}
+			currentIndex = this.index;
+		});
+	}
+
+}
+
+var tabs = GLOBAL.Dom.getElementsByClassName('J_tab');
+// 将Tab1和Tab3的标签激活方式改为mouseover
+setTab(tabs[0], null, 'mouseover');
+setTab(tabs[1], 'tab-currentMenu', null, null, true, 2000);
+setTab(tabs[2], 'tab-currentMenu2', 'mouseover', function(index) {alert('您激活的是第' + (index + 1) + '个标签')});
+
+
+
+</script>
+
+
+
+
+
+
+</body>
+</html>
